@@ -1,53 +1,29 @@
-# Unified Requirements Installer
+# Unified Requirements Installer (URI)
 
-**Category**: Build/Dev Tool
+Merge multiple Python `requirements.txt` files into one, detecting and surfacing version conflicts —
+on Cloudflare Workers (TypeScript + Hono). Originally specced as a Python CLI; rebuilt as a Worker
+with a web UI and a JSON API.
 
-A smart dependency installer that detects and installs Python requirements across multiple projects with conflict resolution.
+## Features
+- Parses PEP 508-style requirements (extras, version specifiers, environment markers)
+- Normalizes package names per PEP 503 and groups across files
+- Detects conflicting pins (`==`), keeps the highest as a best-effort resolution
+- Combines compatible specifiers (e.g. `>=1.0` + `<2.0`)
+- Emits a unified `requirements.txt`, an install command, and notes for skipped/URL/VCS lines
 
-## Features (Planned)
-- Scan directories for requirements.txt files
-- Merge and deduplicate dependencies
-- Version conflict detection and resolution
-- Virtual environment management
-- AI-powered dependency recommendations
-- Security vulnerability scanning
-- Lock file generation
-
-## Installation
-
+## Run
 ```bash
-npm install -g unified-requirements-installer
+npm install
+npm run dev
 ```
 
-## Usage
-
+## Deploy
 ```bash
-uri scan ./projects       # Scan for requirements
-uri install               # Install all dependencies
-uri check                 # Check for conflicts
-uri audit                 # Security audit
-uri venv create           # Create virtual environment
+npm run deploy
 ```
 
-## Tech Stack
-- Node.js + Commander.js
-- Python subprocess integration
-- Workers AI for security analysis
-- npm-check-updates patterns
+## API
+- `POST /api/merge` `{ files: [{name, content}] }` → `{ packageCount, conflictCount, conflicts, notes, requirementsTxt, installCommand }`
 
-## Project Structure
-
-```
-URI/
-├── src/
-│   ├── cli.js          # Entry point
-│   ├── scanner.js      # Requirements scanner
-│   └── installer.js    # Dependency installer
-├── bin/
-│   └── uri             # Executable
-└── package.json
-```
-
-## License
-
-MIT
+## Stack
+Cloudflare Workers · Hono
