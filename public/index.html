@@ -1,0 +1,44 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Unified Requirements Installer</title>
+<style>
+ :root{font-family:system-ui,sans-serif}body{margin:0;background:#0d1117;color:#e6edf3}
+ header{padding:1.2rem;text-align:center}h1{margin:0;font-size:1.5rem}.sub{color:#8b97a7;font-size:.85rem}
+ .wrap{max-width:1000px;margin:0 auto;padding:0 1rem 3rem}
+ .files{display:grid;gap:.8rem}
+ .file{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:.7rem}
+ .file input{background:transparent;border:0;color:#79c0ff;font-weight:600;width:60%}
+ textarea{width:100%;box-sizing:border-box;height:120px;background:#0b0f16;color:#e6edf3;border:1px solid #30363d;border-radius:8px;padding:.6rem;font-family:ui-monospace,monospace;font-size:.82rem;margin-top:.4rem}
+ button{padding:.5rem 1rem;border:0;border-radius:8px;background:#1f6feb;color:#fff;font-weight:600;cursor:pointer}
+ button.sec{background:#30363d}
+ .out{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:1rem;margin-top:1rem}
+ pre{background:#0b0f16;border:1px solid #30363d;border-radius:8px;padding:.8rem;overflow:auto;white-space:pre-wrap}
+ .conflict{border-left:4px solid #da3633;padding:.4rem .7rem;margin:.3rem 0;background:#2d1416;border-radius:6px}
+ .note{color:#8b97a7;font-size:.82rem}
+</style></head><body>
+<header><h1>📦 Unified Requirements Installer</h1><div class="sub">Merge requirements.txt files · detect conflicts · Cloudflare Workers</div></header>
+<div class="wrap">
+ <div class="files" id="files"></div>
+ <p><button class="sec" id="addFile">+ Add file</button> <button id="merge">Merge</button></p>
+ <div id="out"></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);let n=0;
+function addFile(name,content){const id=++n;const div=document.createElement("div");div.className="file";div.innerHTML=`<input value="${name||('requirements-'+id+'.txt')}"/><textarea placeholder="package==1.0.0">${content||""}</textarea>`;$("files").appendChild(div);}
+addFile("requirements-a.txt","requests==2.31.0\nnumpy>=1.24\nflask[async]==3.0.0");
+addFile("requirements-b.txt","requests==2.28.0\nnumpy<2.0\npandas~=2.1");
+$("addFile").onclick=()=>addFile();
+$("merge").onclick=async()=>{
+ const files=[...document.querySelectorAll(".file")].map(f=>({name:f.querySelector("input").value,content:f.querySelector("textarea").value}));
+ $("out").innerHTML="<p class=note>Merging…</p>";
+ const d=await (await fetch("/api/merge",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({files})})).json();
+ if(d.error){$("out").innerHTML=`<p class=note>${d.error}</p>`;return;}
+ let h=`<div class="out"><b>${d.packageCount} packages</b> · <b style="color:${d.conflictCount?'#ff7b72':'#3fb950'}">${d.conflictCount} conflicts</b>`;
+ d.conflicts.forEach(c=>{h+=`<div class="conflict">⚠️ <b>${c.package}</b>: ${c.specifiers.map(s=>`<code>${s.value}</code> <span class=note>(${s.source})</span>`).join(" vs ")} — kept highest pin</div>`;});
+ h+=`<h3>Unified requirements.txt</h3><pre id="merged">${d.requirementsTxt.replace(/</g,"&lt;")}</pre><button class="sec" id="copy">Copy</button> <code>${d.installCommand}</code>`;
+ if(d.notes.length)h+=`<h4>Notes</h4>`+d.notes.map(x=>`<div class=note>• ${x}</div>`).join("");
+ h+="</div>";$("out").innerHTML=h;
+ $("copy").onclick=()=>navigator.clipboard.writeText(d.requirementsTxt);
+};
+</script>
+</body></html>
